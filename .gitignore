@@ -1,0 +1,5 @@
+# Ignore generated / large experiment outputs
+Lab1/figure/
+Lab1/Python3/
+Lab1/denoised_results
+Python3/
