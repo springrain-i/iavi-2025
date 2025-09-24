@@ -8,12 +8,15 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import r2_score
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.linalg import lstsq
+
 # 对于数学文本使用默认字体，中文使用SimHei
+plt.rcParams["font.family"] = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC", "sans-serif"]  # 增加备选中文字体
 plt.rcParams['mathtext.fontset'] = 'stix'  # 数学字体
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 中文字体
 plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+
+
 def multi_frame_denoising(image_paths):
-    #使用多帧平均法去除图像噪声
+    # 使用多帧平均法去除图像噪声
     frames = []
     for path in image_paths:
         img = cv2.imread(str(path))
@@ -116,15 +119,13 @@ def plot_results(original_samples, denoised, avg_noise, param_label):
     return plt.gcf()
 
 
-
-
-def fit_and_plot_Exposure(result_root_dir, noise_data,fixed_gain_for_exp_analysis):
+def fit_and_plot_Exposure(result_root_dir, noise_data, fixed_gain_for_exp_analysis):
     # 分析噪声与 Exposure 的关系，固定 Gain
     def quadratic_model(x, a, b, c):
-        return a * x**2 + b * x + c
-    
+        return a * x ** 2 + b * x + c
+
     exp_data = sorted([d for d in noise_data if d['gain'] == fixed_gain_for_exp_analysis], key=lambda x: x['exp'])
-    
+
     if exp_data:
         exposures = np.array([d['exp'] for d in exp_data])
         noise_stds_exp = np.array([d['noise_std'] for d in exp_data])
@@ -134,14 +135,14 @@ def fit_and_plot_Exposure(result_root_dir, noise_data,fixed_gain_for_exp_analysi
             params_quad, _ = curve_fit(quadratic_model, exposures, noise_stds_exp)
             y_fit_quad = quadratic_model(exposures, *params_quad)
             r2_quad = r2_score(noise_stds_exp, y_fit_quad)
-            
+
             # 绘制结果
             plt.figure(figsize=(12, 8))
             plt.scatter(exposures, noise_stds_exp, label='实际噪声数据', color='blue', zorder=5)
             plt.plot(exposures, y_fit_quad, label='二次模型拟合', color='red', linestyle='--')
-            
+
             # 在图表上显示公式和 R^2
-            eq_text = f'y = {params_quad[0]:.2e}x^2 + {params_quad[1]:.2e}x + {params_quad[2]:.4f}'
+            eq_text = f'y = {params_quad[0]:.2e}x^2 + {params_quad[1]:.2e}x + {params_quad[2]:.2e}'
             r2_text = f'R^2 = {r2_quad:.4f}'
             plt.title(f'噪声标准差 vs. 曝光 (固定增益 = {fixed_gain_for_exp_analysis})', fontsize=14)
             plt.xlabel('曝光 (Exposure)', fontsize=12)
@@ -150,7 +151,7 @@ def fit_and_plot_Exposure(result_root_dir, noise_data,fixed_gain_for_exp_analysi
             plt.grid(True, linestyle=':', alpha=0.6)
             plt.text(0.05, 0.95, f'拟合模型:\n{eq_text}\n{r2_text}', transform=plt.gca().transAxes,
                      fontsize=12, verticalalignment='top', bbox=dict(boxstyle='round,pad=0.5', fc='wheat', alpha=0.5))
-            
+
             model_fig_path = result_root_dir / f"noise_vs_exposure_model_gain{fixed_gain_for_exp_analysis}.png"
             plt.savefig(model_fig_path, dpi=300, bbox_inches='tight')
             plt.close()
@@ -163,19 +164,20 @@ def fit_and_plot_Exposure(result_root_dir, noise_data,fixed_gain_for_exp_analysi
     else:
         print(f"警告：未找到 增益={fixed_gain_for_exp_analysis} 的数据，无法进行噪声-曝光分析。")
 
+
 def fit_and_plot_Gain(result_root_dir, noise_data, fixed_exp_for_gain_analysis):
     # 分析噪声与 Gain 的关系，固定 Exposure
-    
+
     def linear_model(x, a, b):
         return a * x + b
-    
+
     def sqrt_model(x, a, b):
         return a * np.sqrt(x) + b
-    
+
     def mixed_model(x, a, b, c):
         """混合模型：sqrt(gain) + linear(gain) + constant"""
         return a * np.sqrt(x) + b * x + c
-    
+
     gain_data = sorted([d for d in noise_data if d['exp'] == fixed_exp_for_gain_analysis], key=lambda x: x['gain'])
 
     if gain_data:
@@ -188,12 +190,12 @@ def fit_and_plot_Gain(result_root_dir, noise_data, fixed_exp_for_gain_analysis):
             'sqrt': sqrt_model,
             'mixed': mixed_model
         }
-        
+
         best_r2 = -np.inf
         best_model_name = None
         best_params = None
         best_y_fit = None
-        
+
         # 尝试拟合所有模型
         for model_name, model_func in models.items():
             try:
@@ -206,35 +208,35 @@ def fit_and_plot_Gain(result_root_dir, noise_data, fixed_exp_for_gain_analysis):
                 elif model_name == 'mixed':
                     params, _ = curve_fit(model_func, gains, noise_stds_gain)
                     y_fit = model_func(gains, *params)
-                
+
                 r2 = r2_score(noise_stds_gain, y_fit)
-                
+
                 if r2 > best_r2:
                     best_r2 = r2
                     best_model_name = model_name
                     best_params = params
                     best_y_fit = y_fit
-                    
+
                 print(f"{model_name}模型 R²: {r2:.4f}")
-                
+
             except RuntimeError:
                 print(f"无法拟合 {model_name} 模型")
-        
+
         # 绘制结果
         plt.figure(figsize=(12, 8))
         plt.scatter(gains, noise_stds_gain, label='实际噪声数据', color='green', zorder=5, s=50)
-        
+
         # 绘制最佳拟合曲线
         if best_model_name == 'linear':
             plt.plot(gains, best_y_fit, label=f'线性拟合 (R²={best_r2:.4f})', color='red', linewidth=2)
-            eq_text = f'y = {best_params[0]:.4f}x + {best_params[1]:.4f}'
+            eq_text = f'y = {best_params[0]:.2e}x + {best_params[1]:.2e}'
         elif best_model_name == 'sqrt':
             plt.plot(gains, best_y_fit, label=f'平方根拟合 (R²={best_r2:.4f})', color='blue', linewidth=2)
-            eq_text = f'y = {best_params[0]:.4f}√x + {best_params[1]:.4f}'
+            eq_text = f'y = {best_params[0]:.2e}√x + {best_params[1]:.2e}'
         elif best_model_name == 'mixed':
             plt.plot(gains, best_y_fit, label=f'混合拟合 (R²={best_r2:.4f})', color='purple', linewidth=2)
-            eq_text = f'y = {best_params[0]:.4f}√x + {best_params[1]:.4f}x + {best_params[2]:.4f}'
-        
+            eq_text = f'y = {best_params[0]:.2e}√x + {best_params[1]:.2e}x + {best_params[2]:.2e}'
+
         # 在图表上显示公式和 R²
         r2_text = f'R² = {best_r2:.4f}'
         plt.title(f'噪声标准差 vs. 增益 (固定曝光 = {fixed_exp_for_gain_analysis})', fontsize=14)
@@ -242,21 +244,22 @@ def fit_and_plot_Gain(result_root_dir, noise_data, fixed_exp_for_gain_analysis):
         plt.ylabel('噪声标准差 (Noise Std. Dev.)', fontsize=12)
         plt.legend()
         plt.grid(True, linestyle=':', alpha=0.6)
-        
+
         # 添加模型信息文本框
-        plt.text(0.05, 0.95, f'最佳模型: {best_model_name}\n{eq_text}\n{r2_text}', 
+        plt.text(0.05, 0.95, f'最佳模型: {best_model_name}\n{eq_text}\n{r2_text}',
                  transform=plt.gca().transAxes, fontsize=12, verticalalignment='top',
                  bbox=dict(boxstyle='round,pad=0.5', fc='lightyellow', alpha=0.8))
 
         model_fig_path = result_root_dir / f"noise_vs_gain_model_exp{fixed_exp_for_gain_analysis}.png"
         plt.savefig(model_fig_path, dpi=300, bbox_inches='tight')
         plt.close()
-        
+
         print(f"\n噪声-增益模型分析完成。最佳模型: {best_model_name}, R²: {best_r2:.4f}")
         print(f"结果图已保存至: {model_fig_path}")
 
     else:
         print(f"警告：未找到 曝光={fixed_exp_for_gain_analysis} 的数据，无法进行噪声-增益分析。")
+
 
 def fit_and_plot_3d_model(result_root_dir, noise_data):
     """
@@ -266,7 +269,7 @@ def fit_and_plot_3d_model(result_root_dir, noise_data):
     if not noise_data:
         print("错误：没有噪声数据可用于三维模型拟合。")
         return
-    
+
     exposures = np.array([d['exp'] for d in noise_data])
     gains = np.array([d['gain'] for d in noise_data])
     noise_stds = np.array([d['noise_std'] for d in noise_data])
@@ -274,28 +277,28 @@ def fit_and_plot_3d_model(result_root_dir, noise_data):
     # 定义二阶多项式模型
     def poly_2d(X, p00, p10, p01, p20, p11, p02):
         x, y = X
-        return p00 + p10*x + p01*y + p20*x**2 + p11*x*y + p02*y**2
-    
+        return p00 + p10 * x + p01 * y + p20 * x ** 2 + p11 * x * y + p02 * y ** 2
+
     try:
         # 拟合模型
         params, _ = curve_fit(poly_2d, (exposures, gains), noise_stds)
-        
+
         # 计算 R²
         y_fit = poly_2d((exposures, gains), *params)
         r2 = r2_score(noise_stds, y_fit)
 
         # 打印模型方程
         p00, p10, p01, p20, p11, p02 = params
-        print("\n" + "="*20 + " 三维噪声模型结果 " + "="*20)
+        print("\n" + "=" * 20 + " 三维噪声模型结果 " + "=" * 20)
         print(f"拟合方程: noise_std = f(exp, gain)")
         print(f"  f(x, y) = {p00:.4e} + {p10:.4e}*x + {p01:.4e}*y + {p20:.4e}*x² + {p11:.4e}*x*y + {p02:.4e}*y²")
         print(f"拟合优度 (R²): {r2:.4f}")
-        print("="*62)
+        print("=" * 62)
 
         # 绘制3D图
         fig = plt.figure(figsize=(14, 10))
         ax = fig.add_subplot(111, projection='3d')
-        
+
         # 绘制实际数据点
         ax.scatter(exposures, gains, noise_stds, color='r', marker='o', label='实际噪声数据')
 
@@ -304,7 +307,7 @@ def fit_and_plot_3d_model(result_root_dir, noise_data):
         y_surf = np.linspace(gains.min(), gains.max(), 50)
         x_surf, y_surf = np.meshgrid(x_surf, y_surf)
         z_surf = poly_2d((x_surf, y_surf), *params)
-        
+
         # 绘制拟合曲面
         ax.plot_surface(x_surf, y_surf, z_surf, cmap='viridis', alpha=0.6, label='拟合模型')
 
@@ -312,7 +315,7 @@ def fit_and_plot_3d_model(result_root_dir, noise_data):
         ax.set_ylabel('增益 (Gain)')
         ax.set_zlabel('噪声标准差 (Noise Std. Dev.)')
         ax.set_title('三维噪声模型: Noise vs. Exposure & Gain', fontsize=16)
-        
+
         # 保存图像
         model_fig_path = result_root_dir / "3d_noise_model.png"
         plt.savefig(model_fig_path, dpi=300, bbox_inches='tight')
@@ -322,6 +325,7 @@ def fit_and_plot_3d_model(result_root_dir, noise_data):
     except RuntimeError as e:
         print(f"错误：无法拟合三维噪声模型。{e}")
 
+
 def analyze_and_model_noise(result_root_dir, fixed_gain_for_exp_analysis, fixed_exp_for_gain_analysis):
     """
     分析已保存的噪声数据，建立噪声与曝光、增益的量化模型。
@@ -329,10 +333,9 @@ def analyze_and_model_noise(result_root_dir, fixed_gain_for_exp_analysis, fixed_
     2. 三维模型分析：建立一个 noise = f(exposure, gain) 的通用模型。
     """
 
-
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("开始进行噪声建模与分析...")
-    print("="*50)
+    print("=" * 50)
 
     # 1. 提取所有噪声数据
     noise_data = []
@@ -348,14 +351,14 @@ def analyze_and_model_noise(result_root_dir, fixed_gain_for_exp_analysis, fixed_
             parts = Path(f).parent.name.split('_')
             exp = float(parts[0].replace('exp', ''))
             gain = float(parts[1].replace('gain', ''))
-            
+
             noise_matrix = np.load(f)
-            noise_std = np.std(noise_matrix) #标准差
+            noise_std = np.std(noise_matrix)  # 标准差
             noise_data.append({'exp': exp, 'gain': gain, 'noise_std': noise_std})
         except (ValueError, IndexError) as e:
             print(f"警告：无法解析文件夹名称 '{Path(f).parent.name}'。跳过此文件。错误: {e}")
             continue
-    
+
     if not noise_data:
         print("错误：未能从任何 .npy 文件中成功提取数据。")
         return
@@ -366,7 +369,8 @@ def analyze_and_model_noise(result_root_dir, fixed_gain_for_exp_analysis, fixed_
     fit_and_plot_Gain(result_root_dir, noise_data, fixed_exp_for_gain_analysis)
 
     print("二维分析完成，开始三维噪声模型拟合...")
-    fit_and_plot_3d_model(result_root_dir,noise_data)
+    fit_and_plot_3d_model(result_root_dir, noise_data)
+
 
 if __name__ == "__main__":
     # 简单 CLI：如果第一个参数为 'model'，跳过图像处理直接建模
@@ -376,7 +380,6 @@ if __name__ == "__main__":
     gain_list = [0.0, 5.0, 10.0, 13.0, 15.0, 17.0, 20.0]  # 增益参数
     fixed_gamma = 1.0  # 伽马参数（本次实验固定）
 
-    
     result_root_dir = Path("./denoised_results")  # 结果根文件夹
     result_root_dir.mkdir(exist_ok=True)
 
@@ -404,7 +407,8 @@ if __name__ == "__main__":
                     denoised, frames = multi_frame_denoising(image_paths)
 
                     # 5.2 计算噪声特性
-                    avg_noise_matrix, avg_noise_visual, individual_noise_maps = calculate_noise_properties(frames, denoised)
+                    avg_noise_matrix, avg_noise_visual, individual_noise_maps = calculate_noise_properties(frames,
+                                                                                                           denoised)
 
                     # 5.3 创建该参数组的专属结果文件夹（避免不同组结果重名）
                     param_label = f"exp{exp}_gain{g}_gamma{fixed_gamma}"
