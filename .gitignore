@@ -1,5 +1,18 @@
 # Ignore generated / large experiment outputs
-Lab1/figure/
-Lab1/Python3/
-Lab1/denoised_results
+Lab1_Group13/figure/
+Lab1_Group13/Python3/
+Lab1_Group13/denoised_results
 Python3/
+
+*.zip
+*.png
+*.jpg
+
+*.ply
+*.npz
+
+tmp/
+
+__pycache__/
+*.pyc
+*.csv
