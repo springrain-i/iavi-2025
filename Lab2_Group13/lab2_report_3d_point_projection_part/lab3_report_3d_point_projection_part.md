@@ -26,7 +26,7 @@ However, this initial result was unsatisfactory. As shown in the image below, th
 
 *(Image: Initial projection with `cv2.projectPoints` showing the cat upside-down and with incorrect occlusion)*
 
-![](file:///D:/zju/code/visual%20info%20acquisition/lab2/lab2_report_3d_point_projection_part/upside_down_cat.jpg)
+![](./upside_down_cat.jpg)
 
 To resolve this critical issue, a custom projection function was developed with the assistance of an AI model. The enhanced data processing pipeline incorporated the following key steps:
 
@@ -40,7 +40,7 @@ The final result, after implementing this custom pipeline, showed the cat correc
 
 *(Image: Final AR result using the custom projection function with back-face culling and depth sorting)*
 
-![](file:///D:/zju/code/visual%20info%20acquisition/lab2/lab2_report_3d_point_projection_part/normal_cat.jpg)
+![](./normal_cat.jpg)
 
 ### 3.4 Analysis and Discussion
 
