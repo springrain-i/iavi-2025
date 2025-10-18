@@ -12,7 +12,7 @@ Python3/
 *.npz
 
 tmp/
-
+tmp*
 __pycache__/
 *.pyc
 *.csv
