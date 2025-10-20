@@ -124,11 +124,11 @@ def analyze_block_size_influence(
     left_img_path, 
     right_img_path, 
     params, 
-    # 调整块大小区间：3×3到13×13，间隔2（确保均为奇数）
+    # 调整块大小区间：3×3到13×13，间隔2
     block_sizes=[3, 5, 7, 9, 11, 13]
 ):
     """分析不同块大小对立体匹配的影响（细分区间）"""
-    # 读取并预处理图像（保持不变）
+    # 读取并预处理图像
     left = cv2.imread(left_img_path)
     right = cv2.imread(right_img_path)
     if left is None or right is None:
@@ -138,7 +138,7 @@ def analyze_block_size_influence(
     left_gray = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY)
     right_gray = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
     
-    # 校正图像（保持不变）
+    # 校正图像
     h, w = left_gray.shape[:2]
     R1, R2, P1, P2, Q, _, _ = cv2.stereoRectify(
         params['cameraMatrix1'], params.get('distCoeffs1'),
@@ -166,7 +166,7 @@ def analyze_block_size_influence(
         disp_valid = disp[disp > 0]
         disp_var = np.var(disp_valid) if len(disp_valid) > 0 else 0
         
-        # 新增：计算平均视差（反映匹配稳定性）
+        # 新增：计算平均视差
         disp_mean = np.mean(disp_valid) if len(disp_valid) > 0 else 0
         
         results.append({
@@ -180,7 +180,7 @@ def analyze_block_size_influence(
     # 可视化结果：调整为两张子图，优化尺寸
     plt.figure(figsize=(16, 10))  # 总高度减少，避免空白
     
-    # 1. 有效视差比例 + 平均视差（同一图对比，占比更大）
+    # 1. 有效视差比例 + 平均视差
     plt.subplot(2, 1, 1)  # 2行1列布局的第一幅图
     # 有效视差比例（主坐标轴）
     ax1 = plt.gca()
@@ -192,10 +192,10 @@ def analyze_block_size_influence(
     ax1.legend(loc='upper left', fontsize=9)
     ax1.grid(True, linestyle='--', alpha=0.7)
     
-    # 区间颜色标注（更新大窗口区间为11-13）
+    # 区间颜色标注
     plt.axvspan(3, 5, color='lightgreen', alpha=0.3, label='小窗口区（3-5）')
     plt.axvspan(7, 9, color='lightyellow', alpha=0.3, label='中窗口区（7-9）')
-    plt.axvspan(11, 13, color='lightcoral', alpha=0.3, label='大窗口区（11-13）')  # 调整上限为13
+    plt.axvspan(11, 13, color='lightcoral', alpha=0.3, label='大窗口区（11-13）')  # 上限为13
     # 合并区间标注的图例
     ax1.legend(loc='upper left', handles=ax1.get_legend_handles_labels()[0][:1] + ax1.get_legend_handles_labels()[0][-3:],
                labels=ax1.get_legend_handles_labels()[1][:1] + ax1.get_legend_handles_labels()[1][-3:],
@@ -209,7 +209,7 @@ def analyze_block_size_influence(
     ax2.tick_params(axis='y', labelcolor='green')
     ax2.legend(loc='upper right', fontsize=9)
     
-    # 2. 视差方差（反映细节与噪声，与第一幅图等高）
+    # 2. 视差方差
     plt.subplot(2, 1, 2)  # 2行1列布局的第二幅图
     plt.plot([r['block_size'] for r in results], 
              [r['disp_variance'] for r in results], 'o-', color='orange', label='视差方差')
@@ -218,7 +218,7 @@ def analyze_block_size_influence(
     plt.legend(loc='upper right', fontsize=9)
     plt.grid(True, linestyle='--', alpha=0.7)
     
-    # 同步更新区间标注（上限为13）
+    # 同步更新区间标注
     plt.axvspan(3, 5, color='lightgreen', alpha=0.3)
     plt.axvspan(7, 9, color='lightyellow', alpha=0.3)
     plt.axvspan(11, 13, color='lightcoral', alpha=0.3)  # 调整上限为13
@@ -471,4 +471,5 @@ def main():
     print("\n所有实验完成！结果已保存到实验目录。")
 
 if __name__ == "__main__":
+
     main()
