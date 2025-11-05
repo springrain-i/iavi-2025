@@ -1,0 +1,44 @@
+{
+  "image": "figures\\9.png",
+  "grid": 20,
+  "analysis": {
+    "plane_coef": {
+      "a": 2.62691068649292,
+      "b": 2.149564504623413,
+      "c": 6.091102600097656
+    },
+    "grid": 20,
+    "sharp_stats": {
+      "mean": 4219.74951171875,
+      "median": 996.8198852539062,
+      "std": 6903.00830078125,
+      "left_mean": 3084.708984375,
+      "right_mean": 5354.78955078125,
+      "top_mean": 5653.35546875,
+      "bottom_mean": 2786.143798828125
+    },
+    "exposure_stats": {
+      "mean": 117.03673872617387,
+      "std": 63.949850903663,
+      "clip_dark_ratio": 0.0,
+      "clip_bright_ratio": 0.0
+    },
+    "quality": {
+      "verdict": "PASS",
+      "notes": []
+    },
+    "gradient": {
+      "dx": -2.62691068649292,
+      "dy": -2.149564504623413,
+      "mag": 3.3943021837113445,
+      "angle_deg": -140.70701424005446,
+      "dirs": [
+        "left",
+        "up"
+      ]
+    },
+    "strength": "strong"
+  },
+  "recommendation": "建议沿垂直轴（绕y轴）向‘left’方向微倾（幅度：strong）。理由：画面Sharpness在该方向较弱，需要将合焦面朝该侧旋转。",
+  "heatmap": "D:\\Code\\iavi\\final_project\\code\\adviser_out\\9_sharpness.png"
+}
