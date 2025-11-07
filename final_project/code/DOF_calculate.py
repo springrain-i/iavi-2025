@@ -5,29 +5,28 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from servo_connect import robust_flash_workflow
 
-
+# 图片分析
 class ScheimpflugAnalyzer:
     def __init__(self):
         self.image = None
         self.gray = None
         self._setup_font()
 
+    # 设置字体
     def _setup_font(self):
-        """设置字体"""
         plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
 
+    # 获取指定文件夹中最新的图片文件
     def get_latest_image(self, folder_path):
-        """
-        获取指定文件夹中最新的图片文件
-        """
         folder = Path(folder_path)
         if not folder.exists():
             raise FileNotFoundError(f"Folder not found: {folder_path}")
 
         # 支持的图片格式
-        image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.tiff', '*.tif', '*.bmp', '*.webp']
+        image_extensions = ['*.jpg', '*.jpeg']
 
+        # 读取符合条件的图片
         all_images = []
         for extension in image_extensions:
             all_images.extend(folder.glob(extension))
@@ -46,31 +45,8 @@ class ScheimpflugAnalyzer:
 
         return str(latest_image)
 
-    def get_latest_image_alternative(self, folder_path):
-        """
-        另一种获取最新图片的方法（使用glob）
-        """
-        folder_path = Path(folder_path)
-        image_patterns = [
-            "*.jpg", "*.jpeg", "*.png", "*.tiff", "*.tif", "*.bmp", "*.webp",
-            "*.JPG", "*.JPEG", "*.PNG", "*.TIFF", "*.TIF", "*.BMP", "*.WEBP"
-        ]
-
-        all_images = []
-        for pattern in image_patterns:
-            all_images.extend(folder_path.glob(pattern))
-
-        if not all_images:
-            raise FileNotFoundError(f"No images found in folder: {folder_path}")
-
-        # 按创建时间排序
-        all_images.sort(key=lambda x: x.stat().st_ctime, reverse=True)
-        latest_image = all_images[0]
-
-        return str(latest_image)
-
+    # 加载图片
     def load_image(self, image_path):
-        """加载图片"""
         path = Path(image_path)
         if not path.exists():
             raise FileNotFoundError(f"Image file not found: {image_path}")
@@ -84,20 +60,18 @@ class ScheimpflugAnalyzer:
         print(f"Image size: {self.image.shape[1]} x {self.image.shape[0]}")
         return self.image
 
+    # 检测物体平面
     def detect_object_plane(self):
-        """
-        检测物体平面
-        假设物体是近似直线的长条形物体
-        """
+        # 假设物体是近似直线的长条形物体
         if self.gray is None:
             raise ValueError("Please load image first")
 
         height, width = self.gray.shape
 
-        # 1. 边缘检测
+        # Canny边缘检测
         edges = cv2.Canny(self.gray, 50, 150)
 
-        # 2. 使用霍夫变换检测直线
+        # 使用霍夫变换检测直线
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50,
                                 minLineLength=width * 0.3, maxLineGap=20)
 
@@ -106,7 +80,7 @@ class ScheimpflugAnalyzer:
             # 如果没有检测到明显直线，假设物体是水平的
             return 0, [(0, height // 2), (width, height // 2)], []
 
-        # 3. 找出主要的方向
+        # 找出主要的方向
         angles = []
         valid_lines = []
 
@@ -122,7 +96,7 @@ class ScheimpflugAnalyzer:
         if not angles:
             return 0, [(0, height // 2), (width, height // 2)], []
 
-        # 4. 计算平均角度（去除异常值）
+        # 计算平均角度（去除异常值）
         angles_array = np.array(angles)
         mean_angle = np.mean(angles_array)
         std_angle = np.std(angles_array)
@@ -138,7 +112,7 @@ class ScheimpflugAnalyzer:
 
         print(f"Detected object plane angle: {object_angle:.2f} degrees")
 
-        # 5. 生成代表物体平面的线段
+        # 生成代表物体平面的线段
         center_x, center_y = width // 2, height // 2
         line_length = width * 0.8
 
@@ -153,12 +127,9 @@ class ScheimpflugAnalyzer:
 
         return object_angle, line_points, valid_lines
 
+    # 根据Scheimpflug原理计算镜头倾斜角度
     def calculate_tilt_angle(self, object_angle, camera_params):
-        """
-        根据Scheimpflug原理计算镜头倾斜角度
-        """
         focal_length = camera_params['focal_length']  # mm
-        sensor_height = camera_params['sensor_height']  # mm
 
         # 将物体角度转换为相对于光轴的倾斜角度
         object_tilt_rad = np.radians(object_angle)
@@ -175,10 +146,8 @@ class ScheimpflugAnalyzer:
 
         return tilt_angle_deg
 
-    def calculate_swing_angle(self, object_lines, camera_params):
-        """
-        如果物体在垂直方向也有倾斜，计算摆动角度
-        """
+    # 如果物体在垂直方向也有倾斜，计算摆动角度
+    def calculate_swing_angle(self, object_lines):
         if not object_lines:
             return 0
 
@@ -200,8 +169,8 @@ class ScheimpflugAnalyzer:
 
         return 0
 
+    # 可视化分析结果
     def visualize_analysis(self, object_angle, tilt_angle, swing_angle, line_points, detected_lines):
-        """可视化分析结果"""
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
         # 原图与检测到的直线
@@ -265,8 +234,8 @@ Explanation:
         plt.tight_layout()
         plt.show()
 
+    # 完整的分析流程
     def analyze_and_calculate_tilt(self, folder_path=None, image_path=None, camera_params=None):
-        """完整的分析流程"""
         if folder_path:
             # 从文件夹获取最新图片
             image_path = self.get_latest_image(folder_path)
@@ -279,7 +248,7 @@ Explanation:
         # 加载图片
         self.load_image(image_path)
 
-        # 设置默认相机参数
+        # 设置相机参数
         if camera_params is None:
             camera_params = {
                 'focal_length': 16,  # mm
@@ -294,7 +263,7 @@ Explanation:
         tilt_angle = self.calculate_tilt_angle(object_angle, camera_params)
 
         # 计算摆动角度
-        swing_angle = self.calculate_swing_angle(detected_lines, camera_params)
+        swing_angle = self.calculate_swing_angle(detected_lines)
 
         # 显示结果
         print("\n=== Scheimpflug Analysis Results ===")
@@ -322,6 +291,7 @@ def main():
 
     try:
         # 从文件夹获取最新图片
+        # 相机与电脑连接后图片存在E盘此处
         folder_path = r'E:\DCIM\100MSDCF'
         results = analyzer.analyze_and_calculate_tilt(folder_path=folder_path)
 
@@ -331,11 +301,13 @@ def main():
         print(f"3. This will make the entire object plane sharp")
         print(f"4. Analyzed image: {Path(results['image_path']).name}")
 
+        # 限制镜头旋转角度小于10度（镜头硬件限制）
         if abs(results['tilt_angle']) > 10:
             tilt_angle = 10 * (results['tilt_angle']/abs(results['tilt_angle']))
         else:
             tilt_angle = results['tilt_angle']
 
+        # 将相关指令烧录到arduino
         robust_flash_workflow(tilt_angle)
 
     except Exception as e:
